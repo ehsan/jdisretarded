@@ -1,0 +1,66 @@
+***************
+*** 258,286 ****
+          } else {
+              mLayerController.setViewportMetrics(mGeckoViewport);
+              mLayerController.abortPanZoomAnimation();
+          }
+      }
+  
+      /* Informs Gecko that the screen size has changed. */
+      protected void sendResizeEventIfNecessary(boolean force) {
+-         Log.e(LOGTAG, "### sendResizeEventIfNecessary " + force);
+  
+-         IntSize newSize = getBufferSize();
+          if (!force && mScreenSize != null && mScreenSize.equals(newSize)) {
+              return;
+          }
+  
+          mScreenSize = newSize;
+  
+-         Log.e(LOGTAG, "### Screen-size changed to " + mScreenSize);
+-         GeckoEvent event = GeckoEvent.createSizeChangedEvent(mScreenSize.width, mScreenSize.height,
+-                                                              mScreenSize.width, mScreenSize.height,
+-                                                              mScreenSize.width, mScreenSize.height);
+          GeckoAppShell.sendEventToGecko(event);
+      }
+  
+      // Parses a color from an RGB triple of the form "rgb([0-9]+, [0-9]+, [0-9]+)". If the color
+      // cannot be parsed, returns white.
+      private static int parseColorFromGecko(String string) {
+          if (sColorPattern == null) {
+  
+--- 258,291 ----
+          } else {
+              mLayerController.setViewportMetrics(mGeckoViewport);
+              mLayerController.abortPanZoomAnimation();
+          }
+      }
+  
+      /* Informs Gecko that the screen size has changed. */
+      protected void sendResizeEventIfNecessary(boolean force) {
++         Log.d(LOGTAG, "### sendResizeEventIfNecessary " + force);
+  
++         DisplayMetrics metrics = new DisplayMetrics();
++         GeckoApp.mAppContext.getWindowManager().getDefaultDisplay().getMetrics(metrics);
++         IntSize newSize = new IntSize(metrics.width, metrics.height);
++ 
+          if (!force && mScreenSize != null && mScreenSize.equals(newSize)) {
+              return;
+          }
+  
+          mScreenSize = newSize;
+  
++         Log.i(LOGTAG, "### Screen-size changed to " + mScreenSize);
++ 
++         IntSize bufferSize = getBufferSize();
++         GeckoEvent event = GeckoEvent.createSizeChangedEvent(bufferSize.width, bufferSize.height,   // Window (buffer) size
++                                                              mScreenSize.width, mScreenSize.height, // Screen size
++                                                              bufferSize.width, bufferSize.height);  // Tile-size
+          GeckoAppShell.sendEventToGecko(event);
+      }
+  
+      // Parses a color from an RGB triple of the form "rgb([0-9]+, [0-9]+, [0-9]+)". If the color
+      // cannot be parsed, returns white.
+      private static int parseColorFromGecko(String string) {
+          if (sColorPattern == null) {
+  

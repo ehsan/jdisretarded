@@ -1,0 +1,23 @@
+#filter substitution
+package @ANDROID_PACKAGE_NAME@.tests;
+
+import @ANDROID_PACKAGE_NAME@.*;
+
+/**
+ * A basic page load test.
+ * - loads a page
+ * - verifies it rendered properly
+ * - verifies the displayed url is correct
+ */
+public class testLoad extends PixelTest {
+    public void testLoad() {
+        setTestType("mochitest");
+        String url = getAbsoluteUrl("/robocop/robocop_boxes.html");
+
+        mActions.expectGeckoEvent("Gecko:Ready").blockForEvent();
+
+        loadAndVerifyBoxes(url);
+
+        verifyUrl(url);
+    }
+}
