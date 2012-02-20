@@ -206,19 +206,11 @@ public class LayerController {
             }
         }
 
-        // If we're changing the size of the viewport because of a rotation, don't calculate the
-        // viewport zoom factor here, since it's Gecko who knows how to do that.  So instead of
-        // doing that just forward the request to Gecko.
-        boolean rotation = (size.width > oldWidth && size.height < oldHeight) ||
-                           (size.width < oldWidth && size.height > oldHeight);
-        if (rotation) {
-        } else {
-            PointF newFocus = new PointF(size.width / 2.0f, size.height / 2.0f);
-            float newZoomFactor = size.width / oldWidth;
-            mViewportMetrics.scaleTo(newZoomFactor, newFocus);
-        }
+        PointF newFocus = new PointF(size.width / 2.0f, size.height / 2.0f);
+        float newZoomFactor = size.width * oldZoomFactor / oldWidth;
+        mViewportMetrics.scaleTo(newZoomFactor, newFocus);
 
-        Log.d(LOGTAG, "setViewportSize: " + mViewportMetrics + " (rotation: " + rotation + ")");
+        Log.d(LOGTAG, "setViewportSize: " + mViewportMetrics);
         setForceRedraw();
 
         if (mLayerClient != null)
@@ -258,10 +250,6 @@ public class LayerController {
                 mView.requestRender();
             }
         });
-    }
-
-    public void setZoomFactor(float zoomFactor) {
-      mViewportMetrics.setZoomFactor(zoomFactor);
     }
 
     /**
@@ -378,6 +366,9 @@ public class LayerController {
         // Undo the transforms.
         PointF origin = mViewportMetrics.getOrigin();
         PointF newPoint = new PointF(origin.x, origin.y);
+        float zoom = mViewportMetrics.getZoomFactor();
+        viewPoint.x /= zoom;
+        viewPoint.y /= zoom;
         newPoint.offset(viewPoint.x, viewPoint.y);
 
         Point rootOrigin = mRootLayer.getOrigin();

@@ -62,6 +62,10 @@ import android.util.Log;
  */
 
 public class GeckoEvent {
+    public interface Callback {
+        public void callback(GeckoEvent event, String jsonData);
+    }
+
     private static final String LOGTAG = "GeckoEvent";
 
     private static final int INVALID = -1;
@@ -88,6 +92,8 @@ public class GeckoEvent {
     private static final int NETWORK_CHANGED = 22;
     private static final int PROXIMITY_EVENT = 23;
     private static final int ACTIVITY_RESUMING = 24;
+    private static final int SCREENSHOT = 25;
+    private static final int META_VIEWPORT_QUERY = 26;
 
     public static final int IME_COMPOSITION_END = 0;
     public static final int IME_COMPOSITION_BEGIN = 1;
@@ -135,6 +141,9 @@ public class GeckoEvent {
     public boolean mCanBeMetered;
 
     public int mNativeWindow;
+    public int mTabId;
+
+    Callback mCallback;
 
     private GeckoEvent(int evType) {
         mType = evType;
@@ -378,7 +387,14 @@ public class GeckoEvent {
         GeckoEvent event = new GeckoEvent(VIEWPORT);
         event.mCharacters = "Viewport:Change";
         event.mCharactersExtra = viewport.toJSON();
-        Log.i(LOGTAG, "XXXXXXXXXXXXXX hunt for size: json: " + event.mCharactersExtra);
+        return event;
+    }
+
+    public static GeckoEvent createMetaViewportQueryEvent(int tabId, Callback callback) {
+        Log.i("GeckoEvent", "createMetaViewportQueryEvent");
+        GeckoEvent event = new GeckoEvent(META_VIEWPORT_QUERY);
+        event.mCallback = callback;
+        event.mTabId = tabId;
         return event;
     }
 
@@ -399,5 +415,20 @@ public class GeckoEvent {
         event.mBandwidth = bandwidth;
         event.mCanBeMetered = canBeMetered;
         return event;
+    }
+
+    public static GeckoEvent createScreenshotEvent(int tabId, int sw, int sh, int dw, int dh) {
+        GeckoEvent event = new GeckoEvent(SCREENSHOT);
+        event.mPoints = new Point[2];
+        event.mPoints[0] = new Point(sw, sh);
+        event.mPoints[1] = new Point(dw, dh);
+        event.mMetaState = tabId;
+        return event;
+    }
+
+    public void doCallback(String jsonData) {
+        if (mCallback != null) {
+            mCallback.callback(this, jsonData);
+        }
     }
 }

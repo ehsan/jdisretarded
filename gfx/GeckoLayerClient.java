@@ -376,7 +376,6 @@ public abstract class GeckoLayerClient implements GeckoEventListener,
     }
 
     private void adjustViewportWithThrottling() {
-        Log.i(LOGTAG, "XXXX hunt for sizes: adjustViewportWithThrottling");
         if (!mLayerController.getRedrawHint())
             return;
 
@@ -404,12 +403,10 @@ public abstract class GeckoLayerClient implements GeckoEventListener,
     }
 
     private void adjustViewport() {
-        Log.i(LOGTAG, "XXXX hunt for sizes: adjustViewport");
         ViewportMetrics viewportMetrics =
             new ViewportMetrics(mLayerController.getViewportMetrics());
 
         PointF viewportOffset = viewportMetrics.getOptimumViewportOffset(mBufferSize);
-        viewportMetrics.setViewportOffset(viewportOffset);
         viewportMetrics.setViewport(viewportMetrics.getClampedViewport());
 
         GeckoAppShell.sendEventToGecko(GeckoEvent.createViewportEvent(viewportMetrics));
