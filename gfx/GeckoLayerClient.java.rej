@@ -1,66 +1,77 @@
-***************
-*** 258,286 ****
-          } else {
-              mLayerController.setViewportMetrics(mGeckoViewport);
-              mLayerController.abortPanZoomAnimation();
-          }
-      }
-  
-      /* Informs Gecko that the screen size has changed. */
-      protected void sendResizeEventIfNecessary(boolean force) {
--         Log.e(LOGTAG, "### sendResizeEventIfNecessary " + force);
-  
--         IntSize newSize = getBufferSize();
-          if (!force && mScreenSize != null && mScreenSize.equals(newSize)) {
-              return;
-          }
-  
-          mScreenSize = newSize;
-  
--         Log.e(LOGTAG, "### Screen-size changed to " + mScreenSize);
--         GeckoEvent event = GeckoEvent.createSizeChangedEvent(mScreenSize.width, mScreenSize.height,
--                                                              mScreenSize.width, mScreenSize.height,
--                                                              mScreenSize.width, mScreenSize.height);
-          GeckoAppShell.sendEventToGecko(event);
-      }
-  
-      // Parses a color from an RGB triple of the form "rgb([0-9]+, [0-9]+, [0-9]+)". If the color
-      // cannot be parsed, returns white.
-      private static int parseColorFromGecko(String string) {
-          if (sColorPattern == null) {
-  
---- 258,291 ----
-          } else {
-              mLayerController.setViewportMetrics(mGeckoViewport);
-              mLayerController.abortPanZoomAnimation();
-          }
-      }
-  
-      /* Informs Gecko that the screen size has changed. */
-      protected void sendResizeEventIfNecessary(boolean force) {
-+         Log.d(LOGTAG, "### sendResizeEventIfNecessary " + force);
-  
-+         DisplayMetrics metrics = new DisplayMetrics();
-+         GeckoApp.mAppContext.getWindowManager().getDefaultDisplay().getMetrics(metrics);
-+         IntSize newSize = new IntSize(metrics.width, metrics.height);
-+ 
-          if (!force && mScreenSize != null && mScreenSize.equals(newSize)) {
-              return;
-          }
-  
-          mScreenSize = newSize;
-  
-+         Log.i(LOGTAG, "### Screen-size changed to " + mScreenSize);
-+ 
-+         IntSize bufferSize = getBufferSize();
-+         GeckoEvent event = GeckoEvent.createSizeChangedEvent(bufferSize.width, bufferSize.height,   // Window (buffer) size
-+                                                              mScreenSize.width, mScreenSize.height, // Screen size
-+                                                              bufferSize.width, bufferSize.height);  // Tile-size
-          GeckoAppShell.sendEventToGecko(event);
-      }
-  
-      // Parses a color from an RGB triple of the form "rgb([0-9]+, [0-9]+, [0-9]+)". If the color
-      // cannot be parsed, returns white.
-      private static int parseColorFromGecko(String string) {
-          if (sColorPattern == null) {
-  
+--- GeckoLayerClient.java
++++ GeckoLayerClient.java
+@@ -157,49 +145,47 @@ public abstract class GeckoLayerClient i
+             return null;
+         }
+ 
+ 
+         // Make sure we don't spend time painting areas we aren't interested in.
+         // Only do this if the Gecko viewport isn't going to override our viewport.
+         Rect bufferRect = new Rect(0, 0, width, height);
+ 
+-        if (!mUpdateViewportOnEndDraw) {
+-            // First, find out our ideal displayport. We do this by taking the
+-            // clamped viewport origin and taking away the optimum viewport offset.
+-            // This would be what we would send to Gecko if adjustViewport were
+-            // called now.
+-            ViewportMetrics currentMetrics = mLayerController.getViewportMetrics();
+-            PointF currentBestOrigin = RectUtils.getOrigin(currentMetrics.getClampedViewport());
+-            PointF viewportOffset = currentMetrics.getOptimumViewportOffset(new IntSize(width, height));
+-            currentBestOrigin.offset(-viewportOffset.x, -viewportOffset.y);
++        // First, find out our ideal displayport. We do this by taking the
++        // clamped viewport origin and taking away the optimum viewport offset.
++        // This would be what we would send to Gecko if adjustViewport were
++        // called now.
++        ViewportMetrics currentMetrics = mLayerController.getViewportMetrics();
++        PointF currentBestOrigin = RectUtils.getOrigin(currentMetrics.getClampedViewport());
++        PointF viewportOffset = currentMetrics.getOptimumViewportOffset(new IntSize(width, height));
++        currentBestOrigin.offset(-viewportOffset.x, -viewportOffset.y);
+ 
+-            Rect currentRect = RectUtils.round(new RectF(currentBestOrigin.x, currentBestOrigin.y,
+-                                                         currentBestOrigin.x + width, currentBestOrigin.y + height));
++        Rect currentRect = RectUtils.round(new RectF(currentBestOrigin.x, currentBestOrigin.y,
++                                                     currentBestOrigin.x + width, currentBestOrigin.y + height));
+ 
+-            // Second, store Gecko's displayport.
+-            PointF currentOrigin = mNewGeckoViewport.getDisplayportOrigin();
+-            bufferRect = RectUtils.round(new RectF(currentOrigin.x, currentOrigin.y,
+-                                                   currentOrigin.x + width, currentOrigin.y + height));
++        // Second, store Gecko's displayport.
++        PointF currentOrigin = mGeckoViewport.getDisplayportOrigin();
++        bufferRect = RectUtils.round(new RectF(currentOrigin.x, currentOrigin.y,
++                                               currentOrigin.x + width, currentOrigin.y + height));
+ 
+ 
+-            // Take the intersection of the two as the area we're interested in rendering.
+-            if (!bufferRect.intersect(currentRect)) {
+-                // If there's no intersection, we have no need to render anything,
+-                // but make sure to update the viewport size.
+-                mTileLayer.beginTransaction(mLayerController.getView());
+-                try {
+-                    updateViewport(true);
+-                } finally {
+-                    mTileLayer.endTransaction();
+-                }
+-                return null;
++        // Take the intersection of the two as the area we're interested in rendering.
++        if (!bufferRect.intersect(currentRect)) {
++            // If there's no intersection, we have no need to render anything,
++            // but make sure to update the viewport size.
++            mTileLayer.beginTransaction(mLayerController.getView());
++            try {
++                updateViewport();
++            } finally {
++                mTileLayer.endTransaction();
+             }
+-            bufferRect.offset(Math.round(-currentOrigin.x), Math.round(-currentOrigin.y));
++            return null;
+         }
++        bufferRect.offset(Math.round(-currentOrigin.x), Math.round(-currentOrigin.y));
+ 
+         mTileLayer.beginTransaction(mLayerController.getView());
+ 
+         // Be sure to adjust the buffer size; if it's not at least as large as the viewport size,
+         // ViewportMetrics.getOptimumViewportOffset() gets awfully confused and severe display
+         // corruption results!
+         if (mBufferSize.width != width || mBufferSize.height != height) {
+             mBufferSize = new IntSize(width, height);

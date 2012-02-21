@@ -141,7 +141,7 @@ public class SurfaceTextureLayer extends Layer implements SurfaceTexture.OnFrame
     }
 
     public void update(Point origin, IntSize size, float resolution, boolean inverted, boolean blend) {
-        beginTransaction(null);
+        beginTransaction();
 
         setOrigin(origin);
         setResolution(resolution);
@@ -258,10 +258,6 @@ public class SurfaceTextureLayer extends Layer implements SurfaceTexture.OnFrame
         GLES11.glDisableClientState(GL10.GL_TEXTURE_COORD_ARRAY);
         GLES11.glDisable(LOCAL_GL_TEXTURE_EXTERNAL_OES);
         GLES11.glLoadIdentity();
-
-        if (mBlend) {
-            GLES11.glDisable(GL10.GL_BLEND);
-        }
     }
 
     public SurfaceTexture getSurfaceTexture() {
